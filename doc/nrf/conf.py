@@ -41,6 +41,7 @@ extensions = [
     "zephyr.doxyrunner",
     "sphinx_tabs.tabs",
     "software_maturity_table",
+    "vuln_table",
     "page_filter",
 ]
 
