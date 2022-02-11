@@ -72,6 +72,7 @@ In addition to the |NCS| documentation, information is available in the followin
    release_notes
    known_issues
    software_maturity
+   vulnerabilities
    documentation
 
 ..   cheat_sheet
