@@ -15,9 +15,47 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout the code
+        uses: actions/checkout@v2
         with:
-          submodules: true
+          path: ncs/nrf
+          fetch-depth: 0
+      - name: cache-pip
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-doc-pip
+  # Doxygen >= 1.8.18 is required. This can be removed once ubuntu-latest ships
+  # a compatible version. More details: https://github.com/doxygen/doxygen/issues/7411.
+      - name: Install packages
+        run: |
+          sudo apt update
+          sudo apt-get install -y ninja-build mscgen plantuml libclang1-9 libclang-cpp9
+          DOXYGEN_VERSION=$(cat ./ncs/nrf/scripts/tools-versions-linux.txt |grep 'doxygen' | sed 's/^.*=//')
+          wget --no-verbose https://downloads.sourceforge.net/project/doxygen/rel-${DOXYGEN_VERSION}/doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz
+          tar xf doxygen-${DOXYGEN_VERSION}.linux.bin.tar.gz
+          echo "${PWD}/doxygen-${DOXYGEN_VERSION}/bin" >> $GITHUB_PATH
+      - name: Install base dependencies
+        working-directory: ncs
+        run: |
+          sudo pip3 install -U setuptools wheel pip
+          pip3 install -r nrf/scripts/requirements-base.txt
+      - name: West init and update
+        working-directory: ncs
+        run: |
+          west init -l nrf
+          west update
+          west zephyr-export
+      - name: Install documentation dependencies
+        working-directory: ncs
+        run: |
+          pip3 install -r zephyr/scripts/requirements-doc.txt
+          pip3 install -r nrf/scripts/requirements-doc.txt
+      - name: Build documentation
+        working-directory: ncs/nrf
+        run: |
+          cmake -GNinja -Bdoc/_build -Sdoc -DSPHINXOPTS_EXTRA="-W"
+          ninja -C doc/_build
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
@@ -27,9 +65,8 @@ jobs:
           action: "upload"
           ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "/doc" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "_build/html" # Built app content directory - optional
+          skip_app_build: true
+          app_location: "/doc/_build/html" # App source code path
           ###### End of Repository/Build Configurations ######
 
   close_pull_request_job:
