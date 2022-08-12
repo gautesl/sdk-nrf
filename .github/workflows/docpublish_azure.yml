@@ -1,0 +1,64 @@
+name: Documentation Publish
+
+on:
+  workflow_run:
+    workflows: ["Documentation Build"]
+    types:
+      - completed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v2
+
+      - name: Download artifacts
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: docbuild.yml
+          run_id: ${{ github.event.workflow_run.id }}
+          name: cache
+          path: cache
+
+      # - name: Install dependencies
+      #   run: |
+      #     sudo apt install -y sshpass
+      #     pip3 install -r scripts/requirements-doc.txt
+
+      # - name: Upload cache files
+      #   env:
+      #     NCS_CACHE_AZ_KEY: ${{ secrets.NCS_CACHE_AZ_KEY }}
+      #   run: |
+      #       python3 doc/_scripts/cache_upload.py -i cache
+
+      - name: Prepare documentation upload
+        working-directory: cache
+        run: |
+          # don't do anything if monitor.txt doesn't exist (no publish)
+          if [[ ! -f "extra/monitor.txt" ]]; then
+            exit 0
+          fi
+
+          # decompress cache files
+          for f in *.zip; do
+            unzip "$f"
+          done
+
+          # compress HTML files
+          mkdir upload && cd upload
+          mv ../extra/index.html ../html
+          mv ../extra/versions.json ../html
+          tar -C ../html -zcf "doc_build_${GITHUB_RUN_ID}.tgz" .
+
+          # prepare request file
+          mv ../extra/monitor.txt monitor_${GITHUB_RUN_ID}.txt
+          sed -i "s/__FILE__/doc_build_${GITHUB_RUN_ID}.tgz/g" monitor_${GITHUB_RUN_ID}.txt
+
+      - uses: bacongobbler/azure-blob-storage-upload@main
+        with:
+          source_dir: cache
+          container_name: ncs-doc-staging
+          connection_string: ${{ secrets.AZURE_CONNECTION_STRING }}
+          overwrite: 'true'
