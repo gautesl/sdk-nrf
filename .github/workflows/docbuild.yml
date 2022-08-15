@@ -119,6 +119,9 @@ jobs:
       - name: Prepare documentation upload
         working-directory: cache
         run: |
+          ls
+          ls extra
+
           # don't do anything if monitor.txt doesn't exist (no publish)
           if [[ ! -f "extra/monitor.txt" ]]; then
             exit 0
@@ -129,15 +132,23 @@ jobs:
             unzip "$f"
           done
 
+          ls
+
           # compress HTML files
           mkdir upload && cd upload
           mv ../extra/index.html ../html
           mv ../extra/versions.json ../html
           tar -C ../html -zcf "doc_build_${GITHUB_RUN_ID}.tgz" .
 
+          ls 
+
           # prepare request file
           mv ../extra/monitor.txt monitor_${GITHUB_RUN_ID}.txt
           sed -i "s/__FILE__/doc_build_${GITHUB_RUN_ID}.tgz/g" monitor_${GITHUB_RUN_ID}.txt
+          
+          ls
+          ls ..
+
 
       - uses: bacongobbler/azure-blob-storage-upload@main
         with:
