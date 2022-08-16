@@ -119,12 +119,11 @@ jobs:
       - name: Prepare documentation upload
         working-directory: cache
         run: |
-          ls
-          ls extra
 
           # don't do anything if monitor.txt doesn't exist (no publish)
           if [[ ! -f "extra/monitor.txt" ]]; then
-            exit 0
+            # exit 0
+            echo "No monitor.txt found"
           fi
 
           # decompress cache files
@@ -132,6 +131,7 @@ jobs:
             unzip "$f"
           done
 
+          echo "directory after unzip"
           ls
 
           # compress HTML files
@@ -140,19 +140,23 @@ jobs:
           mv ../extra/versions.json ../html
           tar -C ../html -zcf "doc_build_${GITHUB_RUN_ID}.tgz" .
 
-          ls 
-
           # prepare request file
-          mv ../extra/monitor.txt monitor_${GITHUB_RUN_ID}.txt
-          sed -i "s/__FILE__/doc_build_${GITHUB_RUN_ID}.tgz/g" monitor_${GITHUB_RUN_ID}.txt
-          
+          if [[ -f "extra/monitor.txt" ]]; then
+            mv ../extra/monitor.txt monitor_${GITHUB_RUN_ID}.txt
+            sed -i "s/__FILE__/doc_build_${GITHUB_RUN_ID}.tgz/g" monitor_${GITHUB_RUN_ID}.txt
+          fi
+
+          echo "content in upload"
           ls
-          ls ..
+
+          cd ..
+          mkdir target
+          tar -C upload -zcf "build_${GITHUB_RUN_ID}.tgz" target
 
 
       - uses: bacongobbler/azure-blob-storage-upload@main
         with:
-          source_dir: cache
+          source_dir: cache/target
           container_name: ncs-doc-staging
           connection_string: ${{ secrets.AZURE_CONNECTION_STRING }}
           overwrite: 'true'
