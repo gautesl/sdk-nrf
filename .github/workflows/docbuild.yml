@@ -151,7 +151,8 @@ jobs:
 
           cd ..
           mkdir target
-          tar -C upload -zcf "build_${GITHUB_RUN_ID}.tgz" target
+          cd target
+          tar -C ../upload -zcf "build_${GITHUB_RUN_ID}.tgz" .
 
 
       - uses: bacongobbler/azure-blob-storage-upload@main
