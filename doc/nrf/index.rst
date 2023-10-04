@@ -32,5 +32,6 @@ A "99" at the end of the version number of this documentation indicates continuo
    integrations
    releases_and_maturity
    documentation
+   test_doc
 
 ..   templates/cheat_sheet
